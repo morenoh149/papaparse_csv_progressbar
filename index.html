@@ -3,12 +3,17 @@
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.2.0/papaparse.min.js"></script>
 <script>
-  var url = "http://localhost:7000/data.csv";
+  var url = "http://localhost:8000/data.csv";
   var batchSize = 2500;
   var processed = 0;
   var someApi = "http://httpbin.org/post";
   var progressbar = document.querySelector("#progressbar");
   progressbar.innerHTML = "[..........]";
+
+  /*
+   * call papaparse to read in csv over the network.
+   * we batch these rows into http requests to upload the csv data to an api.
+   */
   Papa.parse(url, {
     download: true,
     // worker: true, // TODO in future make work with a webworker to not freeze the UI
@@ -49,10 +54,10 @@
       }
     },
   });
-  const chunk = (arr, size) =>
-    Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
-      arr.slice(i * size, i * size + size)
-    );
+
+  /*
+   * updates progressbar and status message
+   */
   function renderProgress(fill) {
     var progressbar = document.querySelector("#progressbar");
     progressbar.innerHTML = `[${"=".repeat(fill)}${".".repeat(10 - fill)}]`;
@@ -60,4 +65,12 @@
       progressbar.insertAdjacentHTML("afterend", "json sync complete");
     }
   }
+
+  /*
+   * utility function, chunks an array
+   */
+  const chunk = (arr, size) =>
+    Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
+      arr.slice(i * size, i * size + size)
+    );
 </script>
