@@ -1,55 +1,64 @@
-<script
-  src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.2.0/papaparse.min.js"
-></script>
-<script>
-
-</script>
-var url = "/data.csv";
-var batchSize = 250;
-var total = 10000;
-var processed = 0;
-var host = "http://httpbin.org/post";
-var batch = [];
-var progressbar = document.querySelector("#progress");
-progressbar.innerHTML = "[..........]";
-Papa.parse(url, {
-  download: true,
-  worker: true,
-  step: row => {
-    console.log('row', row)
-    processed += 1;
-    batch.push(row.data);
-    if (batch.length === 250) {
-      // send to api
-      fetch(host, {
-        method: "POST",
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Basic abc'
-        },
-        body: JSON.stringify({
-          import: batch
-        })
-      }).then(res => {
-        if (res.ok) {
-          batch = [];
-          var fill = Math.ciel((processed/total)*10);
-          progressbar.innerHTML = `[${Array(fill).fill('=').join('')}${Array(10-fill).fill('.').join('')}]`
-        }
-      });
-    }
-  },
-  complete: () => {
-    console.log('flush final batch')
-    if (batch.length > 0) {
-      // send to api
-    }
-  }
-});
-<div
-  id="progress"
-  style="font-family: monospace"
->
+<div id="progressbar" style="font-family: monospace;">
   hello
 </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.2.0/papaparse.min.js"></script>
+<script>
+  var url = "http://localhost:7000/data.csv";
+  var batchSize = 250;
+  var totalRows = 150001; // assume we know beforehand
+  var processed = 0;
+  var someApi = "http://httpbin.org/post";
+  var batch = [];
+  var progressbar = document.querySelector("#progressbar");
+  progressbar.innerHTML = "[..........]";
+  Papa.parse(url, {
+    download: true,
+    //worker: true,
+    header: true,
+    step: (row) => {
+      processed += 1;
+      batch.push({
+        foo: {
+          baz: row.data["DebtRatio"],
+          biz: row.data["MonthlyIncome"],
+        },
+        bar: row.data["NumberOfDependents"],
+      });
+      if (batch.length === 250) {
+        console.log("send http request");
+        // send to api
+        fetch(someApi, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            import: batch,
+          }),
+        }).then((res) => {
+          console.log("res", res, processed);
+          if (res.ok) {
+            batch = [];
+            var fill = Math.ceil((processed / totalRows) * 10);
+            renderProgress(fill);
+          }
+        });
+      }
+    },
+    complete: () => {
+      console.log("flush final batch");
+      if (batch.length > 0) {
+        // send to api
+      }
+    },
+  });
 
+  function renderProgress(fill) {
+    var progressbar = document.querySelector("#progressbar");
+    progressbar.innerHTML = `[${Array(fill).fill("=").join("")}${Array(
+      10 - fill
+    )
+      .fill(".")
+      .join("")}]`;
+  }
+</script>
