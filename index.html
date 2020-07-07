@@ -4,7 +4,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.2.0/papaparse.min.js"></script>
 <script>
   var url = "http://localhost:7000/data.csv";
-  var batchSize = 250;
+  var batchSize = 2500;
   var totalRows = 150001; // assume we know beforehand
   var processed = 0;
   var someApi = "http://httpbin.org/post";
@@ -13,20 +13,26 @@
   progressbar.innerHTML = "[..........]";
   Papa.parse(url, {
     download: true,
-    //worker: true,
+    // worker: true, // TODO works with step callback
     header: true,
-    step: (row) => {
-      processed += 1;
-      batch.push({
-        foo: {
-          baz: row.data["DebtRatio"],
-          biz: row.data["MonthlyIncome"],
-        },
-        bar: row.data["NumberOfDependents"],
+    // step: async (row) => {
+    // TODO stream http requests as the csv is read, the json sizes dominate
+    // this step though
+    // },
+    complete: (results) => {
+      console.log("flush final batch", results.data);
+      var items = results.data.map((row) => {
+        return {
+          foo: {
+            baz: row["DebtRatio"],
+            biz: row["MonthlyIncome"],
+          },
+          bar: row["NumberOfDependents"],
+        };
       });
-      if (batch.length === 250) {
-        console.log("send http request");
-        // send to api
+
+      var batches = chunk(items, batchSize);
+      for (batch of batches) {
         fetch(someApi, {
           method: "POST",
           headers: {
@@ -36,29 +42,23 @@
             import: batch,
           }),
         }).then((res) => {
-          console.log("res", res, processed);
-          if (res.ok) {
-            batch = [];
-            var fill = Math.ceil((processed / totalRows) * 10);
-            renderProgress(fill);
+          processed += 1;
+          var fill = Math.ceil((processed / batches.length) * 10);
+          renderProgress(fill);
+          if (processed === batches.length) {
+            var progressbar = document.querySelector("#progressbar");
+            progressbar.insertAdjacentHTML("afterend", "json sync complete");
           }
         });
       }
     },
-    complete: () => {
-      console.log("flush final batch");
-      if (batch.length > 0) {
-        // send to api
-      }
-    },
   });
-
+  const chunk = (arr, size) =>
+    Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
+      arr.slice(i * size, i * size + size)
+    );
   function renderProgress(fill) {
     var progressbar = document.querySelector("#progressbar");
-    progressbar.innerHTML = `[${Array(fill).fill("=").join("")}${Array(
-      10 - fill
-    )
-      .fill(".")
-      .join("")}]`;
+    progressbar.innerHTML = `[${"=".repeat(fill)}${".".repeat(10 - fill)}]`;
   }
 </script>
