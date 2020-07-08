@@ -24,4 +24,4 @@ might be expanded into a json payload like
 }
 ```
 
-in my tests a 10mb csv gets expanded to several 100's of mb in http json requests.
+in my tests a 7mb csv gets expanded to several 36mb in http json requests.
