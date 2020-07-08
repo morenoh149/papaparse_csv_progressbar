@@ -3,7 +3,7 @@
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.2.0/papaparse.min.js"></script>
 <script>
-  var url = "http://localhost:8000/data.csv";
+  var url = "/data.csv";
   var batchSize = 2500;
   var processed = 0;
   var someApi = "http://httpbin.org/post";
@@ -19,7 +19,7 @@
     // worker: true, // TODO in future make work with a webworker to not freeze the UI
     header: true,
     // step: async (row) => {
-    // TODO send http requests as the csv is read, 
+    // TODO send http requests as the csv is read,
     // the json sizes dominate this step though
     // },
     complete: (results) => {
@@ -52,6 +52,33 @@
           renderProgress(fill);
         });
       }
+    },
+    error: (err, file) => {
+      console.log("papaparse error", err, file);
+      // fallback test json for our usecase
+      var body = {
+        import: [
+          {
+            user: {
+              email: "timothy+test1@ironbounddesigns.com",
+              first_name: "TTest 1",
+              last_name: "JTest 1",
+            },
+            pdf:
+              "https://alkeoninfo.com/pdf/BI3GVLQ3FVO2SBM8PNI8/0035230000leia1.pdf",
+          },
+        ],
+      };
+      fetch(someApi, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: body,
+      }).then((res) => {
+        var fill = 10;
+        renderProgress(fill);
+      });
     },
   });
 
